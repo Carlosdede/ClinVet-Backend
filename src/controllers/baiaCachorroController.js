@@ -38,3 +38,15 @@ export const listarCachorrosPorBaia = async (req, res) => {
     res.status(500).json({ error: "Erro ao listar cachorros da baia" });
   }
 };
+//deletar
+export const removerAssociacao = async (req, res) => {
+  const { id_baia } = req.params;
+
+  try {
+    await pool.query("DELETE FROM baia_cachorro WHERE id_baia = $1", [id_baia]);
+    res.status(200).json({ message: "Associação removida com sucesso." });
+  } catch (error) {
+    console.error("Erro ao remover associação:", error);
+    res.status(500).json({ error: "Falha ao remover associação." });
+  }
+};
