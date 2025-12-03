@@ -1,16 +1,16 @@
 import pool from "../config/db.js";
 import { io } from "../server.js";
+import { sendExpoPushNotification } from "../utils/sendPush.js";
 
 export const createAlert = async (req, res) => {
   try {
     const { tipo, confianca, id_baia } = req.body;
 
-    // Validação simples
     if (!tipo || !confianca || !id_baia) {
       return res.status(400).json({ error: "Campos obrigatórios ausentes." });
     }
 
-    // Cria o alerta no banco
+    // Insere alerta
     const result = await pool.query(
       `
       INSERT INTO alerta (tipo, confianca, id_baia, data_hora)
@@ -22,7 +22,7 @@ export const createAlert = async (req, res) => {
 
     const novoAlerta = result.rows[0];
 
-    // Busca informações da baia e cachorro associados
+    // Busca baia + cachorro
     const baiaResult = await pool.query(
       `
       SELECT 
@@ -40,23 +40,36 @@ export const createAlert = async (req, res) => {
     const nome_cachorro =
       baiaResult.rows[0]?.nome_cachorro || "Cachorro não identificado";
 
-    const dataLocal = new Date(novoAlerta.data_hora).toLocaleString("pt-BR", {
-      timeZone: "America/Sao_Paulo",
-    });
-
-    // Cria o objeto do alerta emitido
     const alertaEmitido = {
       id_alerta: novoAlerta.id_alerta,
       tipo: novoAlerta.tipo,
       confianca: parseFloat(novoAlerta.confianca).toFixed(2),
       nome_baia,
       nome_cachorro,
-      data_hora: dataLocal,
+      data_hora: new Date(novoAlerta.data_hora).toLocaleString("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+      }),
     };
 
-    // Emite via Socket.IO
     io.emit("new_alert", alertaEmitido);
-    console.log("🚨 Novo alerta emitido:", alertaEmitido);
+    console.log("Novo alerta emitido:", alertaEmitido);
+
+    const users = await pool.query(`
+      SELECT expo_token 
+      FROM usuario 
+      WHERE expo_token IS NOT NULL AND expo_token <> ''
+    `);
+
+    for (const row of users.rows) {
+      await sendExpoPushNotification(
+        row.expo_token,
+        " ClinVet Security",
+        `${nome_cachorro} — ${nome_baia}`,
+        alertaEmitido
+      );
+    }
+
+    console.log(`Push enviado para ${users.rows.length} usuário(s)`);
 
     return res.status(201).json(alertaEmitido);
   } catch (err) {
