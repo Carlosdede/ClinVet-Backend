@@ -29,16 +29,16 @@ export const login = async (req, res) => {
 
     // Atualiza o expo token do usuário se enviado
     if (expo_token) {
-      await pool.query("UPDATE usuario SET expo_token = $1 WHERE id = $2", [
-        expo_token,
-        user.id,
-      ]);
+      await pool.query(
+        "UPDATE usuario SET expo_token = $1 WHERE id_usuario = $2",
+        [expo_token, user.id_usuario]
+      );
       console.log(" Expo token atualizado para usuário:", user.username);
     }
 
     // Gera token JWT
     const token = jwt.sign(
-      { id: user.id, username: user.username },
+      { id_usuario: user.id_usuario, username: user.username },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
     );
