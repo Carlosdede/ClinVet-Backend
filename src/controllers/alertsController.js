@@ -1,6 +1,6 @@
 import pool from "../config/db.js";
 import { io } from "../server.js";
-import { sendExpoPushNotification } from "../utils/sendPush.js";
+import { sendExpoPushNotification } from "../util/sendPush.js";
 
 export const createAlert = async (req, res) => {
   try {
